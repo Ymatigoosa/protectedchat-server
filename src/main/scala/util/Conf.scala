@@ -2,12 +2,13 @@ package util
 
 import com.typesafe.config.{Config, ConfigFactory}
 import akka.actor.{ExtendedActorSystem, ExtensionIdProvider, ExtensionId, Extension}
+import scala.util.Properties
 
 class ConfExtensionImpl(config: Config) extends Extension {
   config.checkValid(ConfigFactory.defaultReference)
 
   val appHostName = config.getString("tcp-async.app.hostname")
-  val appPort = config.getInt("tcp-async.app.port")
+  val appPort = Properties.envOrElse("PORT", config.getString("tcp-async.app.port")).toInt
 
   val apiUrl = config.getString("tcp-async.api.url")
 
