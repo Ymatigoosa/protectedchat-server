@@ -2,6 +2,7 @@ import sbt._
 import Keys._
 import sbtassembly.Plugin._
 import AssemblyKeys._
+import com.typesafe.sbt.SbtStartScript
 
 name := """tcp-async"""
 
@@ -22,6 +23,8 @@ libraryDependencies ++= Seq(
   "org.mockito" % "mockito-core" % "1.9.5" % "test",
   "org.mockito" % "mockito-all" % "1.9.5" % "test"
 )
+
+seq(SbtStartScript.startScriptForClassesSettings: _*)
 
 assemblySettings
 

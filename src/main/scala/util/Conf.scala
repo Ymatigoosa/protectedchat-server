@@ -16,6 +16,7 @@ class ConfExtensionImpl(config: Config) extends Extension {
   val dbPassword = config.getString("tcp-async.db.password")
   val dbPort = config.getInt("tcp-async.db.port")
   val dbName = config.getString("tcp-async.db.name")
+  val dbHost = config.getString("tcp-async.db.host")
 
   val dbPoolMaxObjects = config.getInt("tcp-async.db.pool.maxObjects")
   val dbPoolMaxIdle = config.getInt("tcp-async.db.pool.maxIdle")
