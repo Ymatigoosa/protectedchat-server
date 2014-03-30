@@ -1,0 +1,185 @@
+package db
+
+import akka.actor._
+import java.net.InetSocketAddress
+import user.User
+import scala.collection.mutable.HashMap
+import user.User.UserInfo
+import com.github.mauricio.async.db.{QueryResult, RowData}
+import scala.Some
+import util.UniqueIdGenerator
+import scala.concurrent.Future
+import scala.util.{Success, Failure}
+import java.util.UUID
+
+/**
+ * Created by Pahomov Dmitry <topt.iiiii@gmail.com> on 02.03.14.
+ */
+
+object UserDB {
+  sealed abstract trait Message
+  case class Register(nickname: String, pwhash: String) extends Message
+  case class Authorise(nickname: String, pwhash: String, ip: InetSocketAddress) extends Message
+  case class Logout(tocken: UUID) extends Message
+  case class Getip(nickname: String) extends Message
+  case class AddFriend(tocken: UUID, friend: String) extends Message
+  case class GetFriends(nickname: String) extends Message
+  case class Timeout() extends Message
+
+  sealed abstract trait Reply
+  case class Registered(nickname: String) extends Reply
+  case class Authorised(nickname: String, sesid: String) extends Reply
+  case class Logouted(nickname: String) extends Reply
+  case class Userip(nickname: String, ip: InetSocketAddress) extends Message
+  case class FriendAdded(owner: String, friend: String) extends Reply
+  case class FriendList(nickname: String, list: Seq[(String, Boolean)]) extends Reply
+  case class Error(msg: String) extends Reply
+}
+
+trait UserQueries {
+  this: DB =>
+  object Query {
+    def addUser(nickname: String, pwhash: String) = execute("INSERT INTO users(nickname, pwhash, userinfo) VALUES (?, ?, ?)",nickname, pwhash, "")
+    def getUser(nickname: String, pwhash: String) = execute("SELECT nickname FROM users WHERE nickname=? AND pwhash=?", nickname, pwhash)
+    def makeFriends(owner: String, friend: String) = execute("INSERT INTO friends(owner, friend) SELECT u1.id, u2.id FROM users AS u1, users AS u2 WHERE u1.nickname=? AND u2.nickname=? AND NOT EXISTS (SELECT owner, friend FROM friends WHERE owner = u1.id AND friend=u2.id)", owner, friend)
+    def getFriendList(nickname: String) = fetch("SELECT u2.nickname FROM users AS u1, users AS u2, friends WHERE u1.nickname=? AND u1.id=friends.owner AND u2.id=friends.friend", nickname)
+  }
+}
+
+object UserDBProps {
+  def props() = Props(classOf[UserDB])
+}
+
+class UserDB extends Actor with ActorLogging with DB with UserQueries {
+  import UserDB._
+
+  def system = context.system
+
+  override implicit def dispatcher = context.dispatcher
+
+  val offline = 0
+  val online = 1
+
+  case class UserSession(socketactor: ActorRef, sesid: String, userip: InetSocketAddress)
+  private var a = HashMap[UUID, UserSession]()
+
+  def receive: Receive = {
+    case Register(nickname, pwhash) => newUser(nickname, pwhash)
+    case Authorise(nickname, pwhash, ip) => AuthoriseUser(ip, nickname, pwhash)
+    case Logout(sesid) => LogoutUser(sesid)
+    case Getip(nickname) => GetUserIp(nickname)
+    case AddFriend(tocken, friend) => AddFriendToUser(sesid, friend)
+    case GetFriends(nickname) => GetUserFriends(nickname)
+    case Timeout =>
+  }
+
+  /**
+   * Prints all data in db to user
+   */
+  def printAll() {
+    log.debug("values in db are:")
+    for {
+      queryResult <- fetch("SELECT * FROM pro")
+      resultSet <- queryResult
+      rowData <- resultSet
+      result = getData(rowData)
+    } log.debug(result)
+  }
+
+  def getData(rowData: RowData) = {
+    rowData("data").asInstanceOf[String]
+  }
+
+  def newUser(nickname: String, pwhash: String) {
+    val connection = sender
+    if ("\\A\\w+\\z".r.findFirstIn(nickname).isEmpty) {
+      connection ! Error("bad nickname")
+      return
+    }
+    Query.addUser(nickname, pwhash).map {
+      queryResult  =>
+        log.debug("newUser insertions complite " + queryResult)
+        connection ! Registered(nickname)
+    } onFailure  {
+      case e  =>
+        log.debug("newUser insertions error: " + e)
+        connection ! Error("nickname already exists")
+    }
+  }
+
+  def AuthoriseUser(ip: InetSocketAddress, nickname: String, pwhash: String) {
+    val connection = sender
+    Query.getUser(nickname, pwhash).map {
+      queryResult =>
+        queryResult.rows match {
+          case Some(rows) => {
+            if (rows.nonEmpty) {
+              LogoutUser(Some(nickname))
+              val sesid = UniqueIdGenerator()
+              a.put( nickname, UserSession(connection, sesid, ip) )
+              connection ! Authorised(nickname, sesid)
+            } else {
+              connection ! Error("cannot authorise this user")
+            }
+          }
+          case None => connection ! Error("cannot authorise this user (query error)")
+        }
+    }
+  }
+
+  def LogoutUser(sesid: String) {
+    nickname match {
+      case Some(nicknamestr) if a.contains(nicknamestr) =>
+        val uinfo = a.remove(nicknamestr)
+        uinfo.get.socketactor ! Logouted(nicknamestr)
+      case _ => sender ! Error("Cannot logout user "+nickname.getOrElse("{Unknown user}"))
+    }
+  }
+
+  def GetUserIp(nickname: String) {
+    a.get(nickname) match {
+      case Some( UserSession(_, _, ip) ) => sender ! Userip(nickname, ip)
+      case _ => sender ! Error("cannot get ip for "+nickname)
+    }
+  }
+
+  def AddFriendToUser(owner: String, friend: String) {
+    val connection = sender
+    Query.makeFriends(owner, friend).map {
+      _ => connection ! FriendAdded(owner, friend)
+    } onFailure  {
+      case e  =>
+        log.debug("AddFriendToUser error: " + e)
+        connection ! Error("cannot add friend")
+    }
+  }
+
+  def GetUserFriends(nickname: String) {
+    val connection = sender
+    Query.getFriendList(nickname) map {
+      q => q match {
+        case Some(rows) =>
+          for {
+            row <- rows
+            friendnick = row("nickname").asInstanceOf[String]
+            isonline = isOnline(friendnick)
+          } yield (friendnick, isonline)
+        case _ => Seq()
+      }
+    } onComplete {
+      case Success(s) => connection ! FriendList(nickname, s)
+      case Failure(t) => connection ! Error("friendlisterror "+t.getMessage)
+    }
+  }
+
+  def isOnline(nickname: String) = a.contains(nickname)
+
+  def getNicknameBytoken(token: String) = {
+    a.find( (a: (String, UserSession)) => UserSession.unapply(a._2).get._1==token) match {
+      case Some((nickname, _)) => Some(nickname)
+      case _ => None
+    }
+  }
+}
+
+//SELECT users.nickname FROM friends,users WHERE users.id=friends.friend AND friends.owner=1
