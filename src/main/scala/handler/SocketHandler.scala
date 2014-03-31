@@ -37,15 +37,15 @@ class SocketHandler(val connection: ActorRef, val remote: InetSocketAddress) ext
   val myname = self.path.name
 
   //context.setReceiveTimeout(180000 milliseconds)
-  println("SocketHandler started for "+remote.toString)
 
   def receive: Receive = {
-    case HttpRequest(GET, Uri.Path("/"), _, _, _) =>
-      sender ! HttpResponse(entity = "PONG!")
-      log.debug("aazazazazazaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 
-    /*case Received(data) =>
-      received(data)*/
+    case HttpRequest(GET, Uri.Path("/"), _, _, _) =>
+      send("hello")
+
+    case HttpRequest(_, _, _, _, _) =>
+      error("Bad request")
+
     case UserDB.Registered(nickname) =>
       send("registered "+nickname)
     case UserDB.Authorised(nickname, token) =>
@@ -60,24 +60,7 @@ class SocketHandler(val connection: ActorRef, val remote: InetSocketAddress) ext
       send("friendadded "+owner+" "+friend)
     case UserDB.FriendList(nickname, seq) =>
       send("friendlist "+nickname+" "+seq.mkString(","))
-    /*case PeerClosed =>
-      log.debug("PeerClosed")
-      stop()
-    case ErrorClosed =>
-      log.debug("ErrorClosed")
-      stop()
-    case Closed =>
-      log.debug("Closed")
-      stop()
-    case ConfirmedClosed =>
-      log.debug("ConfirmedClosed")
-      stop()
-    case Aborted =>
-      log.debug("Aborted")
-      stop()
-    case ReceiveTimeout =>
-      log.debug("TimeoutReceived")
-      stop()*/
+
     case Timedout(HttpRequest(method, uri, _, _, _)) =>
       sender ! HttpResponse(
         status = 500,
@@ -92,7 +75,7 @@ class SocketHandler(val connection: ActorRef, val remote: InetSocketAddress) ext
       case confirmedClose() => connection ! ConfirmedClose
       case close() => connection ! Close*/
       case registration(nickname, pwhash) => UsersDBRef ! UserDB.Register(nickname, pwhash)
-      case authorisation(nickname, pwhash) => UsersDBRef ! UserDB.Authorise(nickname, pwhash, remote)
+      case authorisation(nickname, pwhash) => UsersDBRef ! UserDB.Authorise(nickname, pwhash, new InetSocketAddress("0.0.0.0", 5555)) // TODO - fix addr
       case logout(token) => UsersDBRef ! UserDB.Logout(UserDB.Token(token))
       case update() => send("conupdated")
       case getip(token, nickname) => UsersDBRef ! UserDB.Getip(UserDB.Token(token), nickname)
@@ -103,17 +86,14 @@ class SocketHandler(val connection: ActorRef, val remote: InetSocketAddress) ext
   }
 
   def send(msg: String) {
-    log.debug("sended "+msg+" to "+connection.toString())
-    //connection ! Write(ByteString(msg+"\n"))
+    connection ! HttpResponse(entity = msg)
   }
 
   def error(msg: String) = send("error "+"\""+msg+"\"")
 
   def stop() {
     log.debug("Stopping")
-    UsersDBRef ! UserDB.ConnectionClosed
+    //UsersDBRef ! UserDB.ConnectionClosed
     context stop self
   }
-
-  def RemoteIp = remote
 }

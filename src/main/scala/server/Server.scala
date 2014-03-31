@@ -19,7 +19,7 @@ class Server(handlerProps: HandlerProps) extends Actor {
   IO(Http) ! Http.Bind(self, ConfExtension(system).appHostName, ConfExtension(system).appPort)
 
   override def receive = {
-    case Http.CommandFailed(_: Tcp.Bind) => context stop self
+    case Http.CommandFailed(_: Http.Bind) => context stop self
 
     case Http.Connected(remote, local) =>
       val handler = context.actorOf(SocketHandlerProps.props(sender, remote))
