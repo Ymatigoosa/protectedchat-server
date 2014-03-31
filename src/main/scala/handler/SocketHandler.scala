@@ -1,8 +1,6 @@
 package handler
 
 import akka.actor.{ Props, ActorRef, Actor, ActorLogging }
-import akka.io.Tcp._
-import akka.io.Tcp.Received
 import akka.util.ByteString
 import scala.util.parsing.json._
 import akka.actor.ReceiveTimeout
@@ -38,16 +36,16 @@ class SocketHandler(val connection: ActorRef, val remote: InetSocketAddress) ext
   val UsersDBRef = context.actorSelection("akka://server/user/UserDBActor")
   val myname = self.path.name
 
-  context.setReceiveTimeout(180000 milliseconds)
+  //context.setReceiveTimeout(180000 milliseconds)
   println("SocketHandler started for "+remote.toString)
 
   def receive: Receive = {
     case HttpRequest(GET, Uri.Path("/"), _, _, _) =>
-      connection ! HttpResponse(entity = "PONG!")
+      sender ! HttpResponse(entity = "PONG!")
       log.debug("aazazazazazaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-      
-    case Received(data) =>
-      received(data)
+
+    /*case Received(data) =>
+      received(data)*/
     case UserDB.Registered(nickname) =>
       send("registered "+nickname)
     case UserDB.Authorised(nickname, token) =>
@@ -62,7 +60,7 @@ class SocketHandler(val connection: ActorRef, val remote: InetSocketAddress) ext
       send("friendadded "+owner+" "+friend)
     case UserDB.FriendList(nickname, seq) =>
       send("friendlist "+nickname+" "+seq.mkString(","))
-    case PeerClosed =>
+    /*case PeerClosed =>
       log.debug("PeerClosed")
       stop()
     case ErrorClosed =>
@@ -79,14 +77,20 @@ class SocketHandler(val connection: ActorRef, val remote: InetSocketAddress) ext
       stop()
     case ReceiveTimeout =>
       log.debug("TimeoutReceived")
-      stop()
+      stop()*/
+    case Timedout(HttpRequest(method, uri, _, _, _)) =>
+      sender ! HttpResponse(
+        status = 500,
+        entity = "The " + method + " request to '" + uri + "' has timed out..."
+      )
+    case ev: Http.ConnectionClosed => stop()
   }
 
   def received(data: ByteString) {
     data.utf8String.trim match {
-      case abort() => connection ! Abort
+      /*case abort() => connection ! Abort
       case confirmedClose() => connection ! ConfirmedClose
-      case close() => connection ! Close
+      case close() => connection ! Close*/
       case registration(nickname, pwhash) => UsersDBRef ! UserDB.Register(nickname, pwhash)
       case authorisation(nickname, pwhash) => UsersDBRef ! UserDB.Authorise(nickname, pwhash, remote)
       case logout(token) => UsersDBRef ! UserDB.Logout(UserDB.Token(token))
@@ -100,7 +104,7 @@ class SocketHandler(val connection: ActorRef, val remote: InetSocketAddress) ext
 
   def send(msg: String) {
     log.debug("sended "+msg+" to "+connection.toString())
-    connection ! Write(ByteString(msg+"\n"))
+    //connection ! Write(ByteString(msg+"\n"))
   }
 
   def error(msg: String) = send("error "+"\""+msg+"\"")
