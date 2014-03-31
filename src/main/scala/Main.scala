@@ -2,18 +2,11 @@ import akka.actor.{ Props, ActorSystem }
 import db.UserDBProps
 import handler._
 
-import server.Server
-
-// Simple client
-import java.net._
-import java.io._
-import scala.io._
-
 object Main extends App {
   val system = ActorSystem("server")
 
-  val UserDB = system.actorOf(UserDBProps.props(), "UserDBActor")
-  val service = system.actorOf(Server.props(SocketHandlerProps), "ServerActor")
+  //val UserDB = system.actorOf(UserDBProps.props(), "UserDBActor")
+  val service = system.actorOf(Props(classOf[ApiHandler]), "ApiHandler")
 }
 
 /*object MainWithEchoHandler extends App {

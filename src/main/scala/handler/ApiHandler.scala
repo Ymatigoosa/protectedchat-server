@@ -1,9 +1,8 @@
 package handler
 
 import akka.actor.{ Props, ActorRef, Actor, ActorLogging }
+import akka.pattern.ask
 import akka.util.ByteString
-import scala.util.parsing.json._
-import akka.actor.ReceiveTimeout
 import scala.concurrent.duration._
 import java.net.InetSocketAddress
 import scala.language.postfixOps
@@ -15,12 +14,11 @@ import spray.util._
 import spray.http._
 import HttpMethods._
 import MediaTypes._
+import akka.io.IO
+import util._
 
-object SocketHandlerProps extends HandlerProps{
-  def props(connection: ActorRef, remote: InetSocketAddress) = Props(classOf[SocketHandler], connection, remote)
-}
-
-class SocketHandler(val connection: ActorRef, val remote: InetSocketAddress) extends Actor with ActorLogging {
+class ApiHandler() extends Actor with ActorLogging { // TODO - rename
+  import context.system
 
   val abort = "abort".r
   val confirmedClose = "confirmedclose".r
@@ -34,19 +32,23 @@ class SocketHandler(val connection: ActorRef, val remote: InetSocketAddress) ext
   val getfriends = "getfriends\\s+([-0-9a-zA-Z]+)".r
 
   val UsersDBRef = context.actorSelection("akka://server/user/UserDBActor")
-  val myname = self.path.name
 
   //context.setReceiveTimeout(180000 milliseconds)
+  IO(Http) ! Http.Bind(self, ConfExtension(system).appHostName, ConfExtension(system).appPort)
 
   def receive: Receive = {
+    case Http.CommandFailed(_: Http.Bind) => context stop self
+
+    case Http.Connected(remote, local) =>
+      sender ! Http.Register(self)
 
     case HttpRequest(GET, Uri.Path("/"), _, _, _) =>
-      send("hello")
+      send("hello", sender)
 
     case HttpRequest(_, _, _, _, _) =>
-      error("Bad request")
+      error("Bad request", sender)
 
-    case UserDB.Registered(nickname) =>
+    /*case UserDB.Registered(nickname) =>
       send("registered "+nickname)
     case UserDB.Authorised(nickname, token) =>
       send("authorised "+nickname+" "+token)
@@ -59,7 +61,7 @@ class SocketHandler(val connection: ActorRef, val remote: InetSocketAddress) ext
     case UserDB.FriendAdded(owner, friend) =>
       send("friendadded "+owner+" "+friend)
     case UserDB.FriendList(nickname, seq) =>
-      send("friendlist "+nickname+" "+seq.mkString(","))
+      send("friendlist "+nickname+" "+seq.mkString(","))*/
 
     case Timedout(HttpRequest(method, uri, _, _, _)) =>
       sender ! HttpResponse(
@@ -70,6 +72,7 @@ class SocketHandler(val connection: ActorRef, val remote: InetSocketAddress) ext
   }
 
   def received(data: ByteString) {
+    val client = sender
     data.utf8String.trim match {
       /*case abort() => connection ! Abort
       case confirmedClose() => connection ! ConfirmedClose
@@ -77,23 +80,25 @@ class SocketHandler(val connection: ActorRef, val remote: InetSocketAddress) ext
       case registration(nickname, pwhash) => UsersDBRef ! UserDB.Register(nickname, pwhash)
       case authorisation(nickname, pwhash) => UsersDBRef ! UserDB.Authorise(nickname, pwhash, new InetSocketAddress("0.0.0.0", 5555)) // TODO - fix addr
       case logout(token) => UsersDBRef ! UserDB.Logout(UserDB.Token(token))
-      case update() => send("conupdated")
+      case update() => send("conupdated", client)
       case getip(token, nickname) => UsersDBRef ! UserDB.Getip(UserDB.Token(token), nickname)
       case addfriend(token, nickname) => UsersDBRef ! UserDB.AddFriend(UserDB.Token(token), nickname)
       case getfriends(token) => UsersDBRef ! UserDB.GetFriends(UserDB.Token(token))
-      case _ => error("command syntax error")
+      case _ => error("command syntax error", client)
     }
   }
 
-  def send(msg: String) {
-    connection ! HttpResponse(entity = msg)
+  def send(msg: String, client: ActorRef) {
+    client ! HttpResponse(entity = msg)
   }
 
-  def error(msg: String) = send("error "+"\""+msg+"\"")
+  def error(msg: String, client: ActorRef) {
+    client ! HttpResponse(status = 500, entity = msg)
+  }
 
   def stop() {
     log.debug("Stopping")
     //UsersDBRef ! UserDB.ConnectionClosed
-    context stop self
+    //context stop self
   }
 }

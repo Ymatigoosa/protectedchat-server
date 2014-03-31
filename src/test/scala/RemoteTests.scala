@@ -1,46 +1,41 @@
-package handler
-
 import org.scalatest.matchers.MustMatchers
 import org.scalatest.{ BeforeAndAfterAll, WordSpec }
 import akka.actor.ActorSystem
 import akka.testkit.{ ImplicitSender, TestKit }
-import akka.io.Tcp._
 import akka.util.ByteString
-import akka.io.Tcp.Received
-import db.{UserQueries, DB, UserDBProps}
-import server.TcpServer
+import db.UserDBProps
 import java.net.{InetAddress, Socket}
 import scala.io.BufferedSource
 import java.io.PrintStream
 import scala.concurrent._
-import scala.concurrent.duration._
-class SocketHandlerSpec(_system: ActorSystem)
+class RemoteTests(_system: ActorSystem)
   extends TestKit(_system)
   with ImplicitSender
   with WordSpec
   with MustMatchers
   with BeforeAndAfterAll
-  with DB
-  with UserQueries{
+  //with DB
+  //with UserQueries
+  {
 
   def this() = this(ActorSystem("SocketHandlerSpec"))
 
-  override implicit def dispatcher = ExecutionContext.Implicits.global
+  //override implicit def dispatcher = ExecutionContext.Implicits.global
 
-  val tsystem = ActorSystem("server")
-  val UserDB = tsystem.actorOf(UserDBProps.props(), "UserDBActor")
-  val service = tsystem.actorOf(TcpServer.props(SocketHandlerProps), "ServerActor")
+  //val tsystem = ActorSystem("server")
+  //val UserDB = tsystem.actorOf(UserDBProps.props(), "UserDBActor")
+  //val service = tsystem.actorOf(TcpServer.props(SocketHandlerProps), "ServerActor")
 
-  val ts = new Socket(InetAddress.getByName("localhost"), 9999)
+  val ts = new Socket(InetAddress.getByName("54.225.172.112"), 8080)
   val in = new BufferedSource(ts.getInputStream()).getLines()
   val out = new PrintStream(ts.getOutputStream())
 
-  val ts2 = new Socket(InetAddress.getByName("localhost"), 9999)
+  val ts2 = new Socket(InetAddress.getByName("54.225.172.112"), 8080)
   val in2 = new BufferedSource(ts2.getInputStream()).getLines()
   val out2 = new PrintStream(ts2.getOutputStream())
 
   override def beforeAll {
-    val a = for {
+    /*val a = for {
       _ <- execute("DELETE FROM friends")
       _ <- execute("DELETE FROM users")
       _ <- Query.addUser("abc","abc")
@@ -50,16 +45,16 @@ class SocketHandlerSpec(_system: ActorSystem)
       _ <- Query.makeFriends("abc","bbb")
       _ <- Query.makeFriends("abc","ggg")
     } yield 1
-    Await.result(a, Duration.Inf)
+    Await.result(a, Duration.Inf)*/
   }
 
   override def afterAll {
-    execute("DELETE FROM friends")
-    execute("DELETE FROM users")
+    /*execute("DELETE FROM friends")
+    execute("DELETE FROM users")*/
     ts.close()
     ts2.close()
-    TestKit.shutdownActorSystem(tsystem)
-    TestKit.shutdownActorSystem(system)
+    //TestKit.shutdownActorSystem(tsystem)
+    //TestKit.shutdownActorSystem(system)
   }
 
   var token = new String

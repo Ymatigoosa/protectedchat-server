@@ -1,6 +1,6 @@
 package server
 
-import akka.io.{ IO, Tcp }
+import akka.io.{ IO }
 import java.net.InetSocketAddress
 import util._
 import handler._
@@ -22,7 +22,7 @@ class Server(handlerProps: HandlerProps) extends Actor {
     case Http.CommandFailed(_: Http.Bind) => context stop self
 
     case Http.Connected(remote, local) =>
-      val handler = context.actorOf(SocketHandlerProps.props(sender, remote))
+      val handler = context.actorOf(Props(classOf[ApiHandler]))
       sender ! Http.Register(handler)
   }
 }
