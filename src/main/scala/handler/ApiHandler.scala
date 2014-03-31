@@ -93,7 +93,7 @@ class ApiHandler() extends Actor with ActorLogging { // TODO - rename
   }
 
   def error(msg: String, client: ActorRef) {
-    client ! HttpResponse(status = 500, entity = msg)
+    client ! HttpResponse(status = 404, entity = msg)
   }
 
   def stop() {
