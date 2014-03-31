@@ -44,7 +44,8 @@ class SocketHandler(val connection: ActorRef, val remote: InetSocketAddress) ext
   def receive: Receive = {
     case HttpRequest(GET, Uri.Path("/"), _, _, _) =>
       connection ! HttpResponse(entity = "PONG!")
-
+      log.debug("aazazazazazaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+      
     case Received(data) =>
       received(data)
     case UserDB.Registered(nickname) =>
