@@ -11,6 +11,12 @@ import java.net.InetSocketAddress
 import scala.language.postfixOps
 import db.UserDB
 import util.UniqueIdGenerator
+import spray.can.Http
+import spray.can.server.Stats
+import spray.util._
+import spray.http._
+import HttpMethods._
+import MediaTypes._
 
 object SocketHandlerProps extends HandlerProps{
   def props(connection: ActorRef, remote: InetSocketAddress) = Props(classOf[SocketHandler], connection, remote)
@@ -36,6 +42,9 @@ class SocketHandler(val connection: ActorRef, val remote: InetSocketAddress) ext
   println("SocketHandler started for "+remote.toString)
 
   def receive: Receive = {
+    case HttpRequest(GET, Uri.Path("/"), _, _, _) =>
+      connection ! HttpResponse(entity = "PONG!")
+
     case Received(data) =>
       received(data)
     case UserDB.Registered(nickname) =>

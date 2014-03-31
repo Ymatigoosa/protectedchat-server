@@ -2,7 +2,7 @@ import akka.actor.{ Props, ActorSystem }
 import db.UserDBProps
 import handler._
 
-import server.TcpServer
+import server.Server
 
 // Simple client
 import java.net._
@@ -13,15 +13,7 @@ object Main extends App {
   val system = ActorSystem("server")
 
   val UserDB = system.actorOf(UserDBProps.props(), "UserDBActor")
-  val service = system.actorOf(TcpServer.props(SocketHandlerProps), "ServerActor")
-
-  while (true) {
-    readLine() match {
-      case "test" => println("hhh")
-      case _ =>
-    }
-  }
-
+  val service = system.actorOf(Server.props(SocketHandlerProps), "ServerActor")
 }
 
 /*object MainWithEchoHandler extends App {

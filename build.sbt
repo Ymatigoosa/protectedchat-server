@@ -20,6 +20,13 @@ libraryDependencies ++= Seq(
   "com.github.mauricio" %% "postgresql-async" % "0.2.6",
   "com.typesafe" % "config" % "1.0.2",
   "org.scalatest" % "scalatest_2.10" % "1.9.1" % "test",
+  "io.spray" % "spray-can" % "1.3.1",
+  "io.spray" % "spray-http" % "1.3.1",
+  "io.spray" % "spray-httpx" % "1.3.1",
+  "io.spray" % "spray-util" % "1.3.1",
+  "io.spray" % "spray-client" % "1.3.1",
+  "io.spray" % "spray-testkit" % "1.3.1",
+  "io.spray" % "spray-routing" % "1.3.1",
   "org.mockito" % "mockito-core" % "1.9.5" % "test",
   "org.mockito" % "mockito-all" % "1.9.5" % "test"
 )
