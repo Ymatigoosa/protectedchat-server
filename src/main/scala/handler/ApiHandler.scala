@@ -25,7 +25,7 @@ import play.api.libs.json.monad.syntax._
 import com.fasterxml.jackson.core.JsonParseException
 
 class ApiHandler() extends Actor with ActorLogging { // TODO - rename
-  import context.system
+  implicit val system = context.system
 
   val UsersDBRef = context.actorSelection("akka://server/user/UserDBActor")
 
