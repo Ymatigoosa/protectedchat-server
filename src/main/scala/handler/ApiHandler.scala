@@ -22,6 +22,7 @@ import play.api.libs.json._
 import play.api.libs.json.extensions._
 import play.api.libs.json.monad._
 import play.api.libs.json.monad.syntax._
+import com.fasterxml.jackson.core.JsonParseException
 
 class ApiHandler() extends Actor with ActorLogging { // TODO - rename
   import context.system
@@ -36,7 +37,7 @@ class ApiHandler() extends Actor with ActorLogging { // TODO - rename
     case Http.Connected(remote, local) =>
       sender ! Http.Register(self)
 
-    case HttpRequest(POST, Uri.Path("/api/json/"), _, entity, _) =>
+    case HttpRequest(POST, Uri.Path("/api/json/"), _, entity: HttpEntity.NonEmpty, _) =>
       processJson(entity.asString, sender)
 
     case HttpRequest(_, _, _, _, _) =>
@@ -65,56 +66,58 @@ class ApiHandler() extends Actor with ActorLogging { // TODO - rename
   }
 
   def processJson(data: String, client: ActorRef) {
-    Json.parse(data) match {
-      case json"""{
+    try {
+      Json.parse(data) match {
+
+        case json"""{
         "mode" : "registration",
         "nickname" : $nickname,
         "pw": $pw
-      }""" if isJsString(nickname,pw) => error(NotImplemented, s"Not implemented yet $nickname $pw", client)
+      }""" if isJsString(nickname, pw) => error(NotImplemented, s"Not implemented yet $nickname $pw", client)
 
-      case json"""{
+        case json"""{
         "mode" : "authorisation",
         "nickname" : $nickname,
         "pw": $pw,
         "p2pip": $p2pip
       }""" if isJsString(nickname, pw, p2pip) => error(NotImplemented, s"Not implemented yet $nickname $pw $p2pip", client)
 
-      case json"""{
+        case json"""{
         "mode" : "logout",
         "token" : $token
       }""" if isJsString(token) => error(NotImplemented, s"Not implemented yet $token", client)
 
-      case json"""{
+        case json"""{
         "mode" : "getip",
         "token" : $token,
         "nickname" : $nickname
       }""" if isJsString(token, nickname) => error(NotImplemented, s"Not implemented yet $token $nickname", client)
 
-      case json"""{
+        case json"""{
         "mode" : "addfriend",
         "token" : $token,
         "nickname" : $nickname
       }""" if isJsString(token, nickname) => error(NotImplemented, s"Not implemented yet $token $nickname", client)
 
-      case json"""{
+        case json"""{
         "mode" : "removefriend",
         "token" : $token,
         "nickname" : $nickname
       }""" if isJsString(token, nickname) => error(NotImplemented, s"Not implemented yet $token $nickname", client)
 
-      case json"""{
+        case json"""{
         "mode" : "getfriends",
         "token" : $token
       }""" if isJsString(token) => error(NotImplemented, s"Not implemented yet $token", client)
 
-      case json"""{
+        case json"""{
         "mode" : "update",
         "token" : $token
       }""" if isJsString(token) => error(NotImplemented, s"Not implemented yet $token", client)
 
-      case _ =>
-        error(BadRequest, "bad json", client)
-      /*case registration(nickname, pwhash) => UsersDBRef ! UserDB.Register(nickname, pwhash)
+        case _ =>
+          error(BadRequest, "bad json", client)
+        /*case registration(nickname, pwhash) => UsersDBRef ! UserDB.Register(nickname, pwhash)
       case authorisation(nickname, pwhash) => UsersDBRef ! UserDB.Authorise(nickname, pwhash, new InetSocketAddress("0.0.0.0", 5555)) // TODO - fix addr
       case logout(token) => UsersDBRef ! UserDB.Logout(UserDB.Token(token))
       case update() => send("conupdated", client)
@@ -122,6 +125,9 @@ class ApiHandler() extends Actor with ActorLogging { // TODO - rename
       case addfriend(token, nickname) => UsersDBRef ! UserDB.AddFriend(UserDB.Token(token), nickname)
       case getfriends(token) => UsersDBRef ! UserDB.GetFriends(UserDB.Token(token))
       case _ => error("command syntax error", client)*/
+      }
+    } catch {
+      case e: JsonParseException => error(BadRequest, "bad json", client)
     }
   }
 
