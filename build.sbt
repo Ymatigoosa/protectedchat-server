@@ -1,5 +1,6 @@
 import sbt._
 import Keys._
+import sbt.Keys._
 import sbtassembly.Plugin._
 import AssemblyKeys._
 import com.typesafe.sbt.SbtStartScript
@@ -11,13 +12,17 @@ version := "1.0"
 scalaVersion := "2.10.4"
 
 resolvers ++= Seq(
-"Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
+  "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
+  "mandubian maven bintray" at "http://dl.bintray.com/mandubian/maven",
+  "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
 )
 
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor" % "2.3.0",
   "com.typesafe.akka" %% "akka-testkit" % "2.3.0",
   "com.github.mauricio" %% "postgresql-async" % "0.2.6",
+  "com.typesafe.play" %% "play-json" % "2.2.2",
+  "com.mandubian" %% "play-json-zipper" % "1.1",
   "com.typesafe" % "config" % "1.0.2",
   "org.scalatest" % "scalatest_2.10" % "1.9.1" % "test",
   "io.spray" % "spray-can" % "1.3.1",
