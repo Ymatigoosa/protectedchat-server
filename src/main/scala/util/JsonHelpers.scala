@@ -7,9 +7,13 @@ import play.api.libs.json._
  *
  * unapply stolen from https://github.com/mandubian/play-json-zipper
  */
-package object JsonExtensions {
+package object JsonHelpers {
 
-  class JsonWrapper(val jsonval: JsValue, val sc: StringContext) {
+  implicit class JsValueHelper(val jv: JsValue) {
+    def pattern = new JsonPattern(jv)
+  }
+
+  class JsonPattern(val jv: JsValue) { // TODO - keys dont match!
     def compare(matcher: JsZipper, zipper: JsZipper): Option[Seq[JsValue]] = {
       def step(acc: Seq[Option[JsValue]], curMatcher: JsZipper, curZipper: JsZipper): Seq[Option[JsValue]] = {
         (curMatcher.value, curZipper.value) match {
@@ -44,24 +48,7 @@ package object JsonExtensions {
     }
 
     def unapplySeq(js: JsValue): Option[Seq[JsValue]] = {
-      compare(JsZipper(jsonval), JsZipper(js))
-    }
-  }
-
-  implicit class JsonHelper(val sc: StringContext) extends {
-
-    object json {
-      def apply(args: Any*): JsonWrapper = {
-        val strings = sc.parts.iterator
-        val expressions = args.iterator
-        var buf = new StringBuffer(strings.next)
-        while (strings.hasNext) {
-          buf append expressions.next
-          buf append strings.next
-        }
-        val jsval = Json.parse(buf.toString)
-        new JsonWrapper(jsval, sc)
-      }
+      compare(JsZipper(jv), JsZipper(js))
     }
   }
 }

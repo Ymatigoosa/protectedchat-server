@@ -16,10 +16,11 @@ import MediaTypes._
 import StatusCodes._
 import akka.io.IO
 import util._
-import util.JsonExtensions._
+import util.JsonHelpers._
 import scala.util.parsing.json.{JSONObject}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.libs.json.extensions._
 import play.api.libs.json.monad._
 import play.api.libs.json.monad.syntax._
 import com.fasterxml.jackson.core.JsonParseException
@@ -35,7 +36,7 @@ class ApiHandler() extends Actor with ActorLogging { // TODO - rename
         "mode" : "registration",
         "nickname" : "_?_",
         "pw": "_?_"
-      }"""
+      }""".pattern
 
   def receive: Receive = {
     case Http.CommandFailed(_: Http.Bind) => context stop self
