@@ -24,19 +24,14 @@ import play.api.libs.json.extensions._
 import play.api.libs.json.monad._
 import play.api.libs.json.monad.syntax._
 import com.fasterxml.jackson.core.JsonParseException
+import server.JsonPatterns
 
-class ApiHandler() extends Actor with ActorLogging { // TODO - rename
+class ApiHandler() extends Actor with ActorLogging with JsonPatterns { // TODO - rename
   implicit val system = context.system
 
   val UsersDBRef = context.actorSelection("akka://server/user/UserDBActor")
 
   IO(Http) ! Http.Bind(self, ConfExtension(system).appHostName, ConfExtension(system).appPort)
-
-  val registration = json"""{
-        "mode" : "registration",
-        "nickname" : "_?_",
-        "pw": "_?_"
-      }""".pattern("_?_")
 
   def receive: Receive = {
     case Http.CommandFailed(_: Http.Bind) => context stop self
@@ -76,47 +71,29 @@ class ApiHandler() extends Actor with ActorLogging { // TODO - rename
     try {
       Json.parse(data) match {
 
-        case registration(nickname: JsString, pw: JsString) => error(NotImplemented, s"Not implemented yet $nickname $pw", client)
+        case registration(nickname: JsString, pw: JsString) =>
+          error(NotImplemented, s"Not implemented yet $nickname $pw", client)
 
-        /*case json"""{
-        "mode" : "authorisation",
-        "nickname" : $nickname,
-        "pw": $pw,
-        "p2pip": $p2pip
-      }""" if isJsString(nickname, pw, p2pip) => error(NotImplemented, s"Not implemented yet $nickname $pw $p2pip", client)
+        case authorization(nickname: JsString, pw: JsString, p2pip: JsString) =>
+          error(NotImplemented, s"Not implemented yet $nickname $pw $p2pip", client)
 
-        case json"""{
-        "mode" : "logout",
-        "token" : $token
-      }""" if isJsString(token) => error(NotImplemented, s"Not implemented yet $token", client)
+        case logout(token: JsString) =>
+          error(NotImplemented, s"Not implemented yet $token", client)
 
-        case json"""{
-        "mode" : "getip",
-        "token" : $token,
-        "nickname" : $nickname
-      }""" if isJsString(token, nickname) => error(NotImplemented, s"Not implemented yet $token $nickname", client)
+        case getip(token: JsString, nickname: JsString) =>
+          error(NotImplemented, s"Not implemented yet $token $nickname", client)
 
-        case json"""{
-        "mode" : "addfriend",
-        "token" : $token,
-        "nickname" : $nickname
-      }""" if isJsString(token, nickname) => error(NotImplemented, s"Not implemented yet $token $nickname", client)
+        case addfriend(token: JsString, nickname: JsString) =>
+          error(NotImplemented, s"Not implemented yet $token $nickname", client)
 
-        case json"""{
-        "mode" : "removefriend",
-        "token" : $token,
-        "nickname" : $nickname
-      }""" if isJsString(token, nickname) => error(NotImplemented, s"Not implemented yet $token $nickname", client)
+        case removefriend(token: JsString, nickname: JsString) =>
+          error(NotImplemented, s"Not implemented yet $token $nickname", client)
 
-        case json"""{
-        "mode" : "getfriends",
-        "token" : $token
-      }""" if isJsString(token) => error(NotImplemented, s"Not implemented yet $token", client)
+        case getfriends(token: JsString) =>
+          error(NotImplemented, s"Not implemented yet $token", client)
 
-        case json"""{
-        "mode" : "update",
-        "token" : $token
-      }""" if isJsString(token) => error(NotImplemented, s"Not implemented yet $token", client)*/
+        case update(token: JsString) =>
+          error(NotImplemented, s"Not implemented yet $token", client)
 
         case _ =>
           error(BadRequest, "bad json content", client)
