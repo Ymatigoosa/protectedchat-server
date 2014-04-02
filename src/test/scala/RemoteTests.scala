@@ -8,7 +8,7 @@ import java.net.{InetAddress, Socket}
 import scala.io.BufferedSource
 import java.io.PrintStream
 import scala.concurrent._
-class RemoteTests(_system: ActorSystem)
+/*class RemoteTests(_system: ActorSystem)
   extends TestKit(_system)
   with ImplicitSender
   with WordSpec
@@ -170,4 +170,4 @@ class RemoteTests(_system: ActorSystem)
       //assert(in3.next() == "logouted 213")
     }*/
   }
-}
+}*/
