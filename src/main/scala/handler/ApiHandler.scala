@@ -33,8 +33,8 @@ class ApiHandler() extends Actor with ActorLogging { // TODO - rename
 
   val registration = json"""{
         "mode" : "registration",
-        "nickname" : "_?_:String",
-        "pw": "_?_:String"
+        "nickname" : "_?_",
+        "pw": "_?_"
       }"""
 
   def receive: Receive = {
@@ -75,7 +75,7 @@ class ApiHandler() extends Actor with ActorLogging { // TODO - rename
     try {
       Json.parse(data) match {
 
-        case registration(nickname, pw) if isJsString(nickname, pw) => error(NotImplemented, s"Not implemented yet $nickname $pw", client)
+        case registration(nickname: JsString, pw: JsString) => error(NotImplemented, s"Not implemented yet $nickname $pw", client)
 
         /*case json"""{
         "mode" : "authorisation",

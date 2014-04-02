@@ -4,6 +4,8 @@ import play.api.libs.json._
 
 /**
  * Created by 7 on 02.04.2014.
+ *
+ * unapply stolen from https://github.com/mandubian/play-json-zipper
  */
 package object JsonExtensions {
 
@@ -41,29 +43,8 @@ package object JsonExtensions {
       else Some(matching.map(_.get))
     }
 
-    val VAR_REPLACE = "\"_?_\""
-
     def unapplySeq(js: JsValue): Option[Seq[JsValue]] = {
-      //val jsBase = Json.parse(sc.parts.mkString(VAR_REPLACE))
-
       compare(JsZipper(jsonval), JsZipper(js))
-      /*val witness = JsZipper(jsBase).streamDeepLeaves
-    val sample = JsZipper(js).streamDeepLeaves
-
-    val zipped = sample.zip(witness)
-    val matching = zipped.foldLeft(Seq[Option[JsValue]]()){ case( all, (zipsample, zipwitness)) =>
-      (zipsample.value, zipwitness.value) match {
-        case (a, JsNull)      => all :+ Some(a)
-        case (a, b) if a == b => all
-        case _                => all :+ None
-      }
-    }
-
-    println("matching:"+matching)
-
-    if(matching.exists( _.isEmpty )) None
-    else Some(matching.map(_.get))*/
-
     }
   }
 
