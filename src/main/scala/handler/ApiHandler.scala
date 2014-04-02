@@ -16,10 +16,10 @@ import MediaTypes._
 import StatusCodes._
 import akka.io.IO
 import util._
+import util.JsonExtensions._
 import scala.util.parsing.json.{JSONObject}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.libs.json.extensions._
 import play.api.libs.json.monad._
 import play.api.libs.json.monad.syntax._
 import com.fasterxml.jackson.core.JsonParseException
@@ -30,6 +30,12 @@ class ApiHandler() extends Actor with ActorLogging { // TODO - rename
   val UsersDBRef = context.actorSelection("akka://server/user/UserDBActor")
 
   IO(Http) ! Http.Bind(self, ConfExtension(system).appHostName, ConfExtension(system).appPort)
+
+  val registration = json"""{
+        "mode" : "registration",
+        "nickname" : "_?_:String",
+        "pw": "_?_:String"
+      }"""
 
   def receive: Receive = {
     case Http.CommandFailed(_: Http.Bind) => context stop self
@@ -69,13 +75,9 @@ class ApiHandler() extends Actor with ActorLogging { // TODO - rename
     try {
       Json.parse(data) match {
 
-        case json"""{
-        "mode" : "registration",
-        "nickname" : $nickname,
-        "pw": $pw
-      }""" if isJsString(nickname, pw) => error(NotImplemented, s"Not implemented yet $nickname $pw", client)
+        case registration(nickname, pw) if isJsString(nickname, pw) => error(NotImplemented, s"Not implemented yet $nickname $pw", client)
 
-        case json"""{
+        /*case json"""{
         "mode" : "authorisation",
         "nickname" : $nickname,
         "pw": $pw,
@@ -113,10 +115,10 @@ class ApiHandler() extends Actor with ActorLogging { // TODO - rename
         case json"""{
         "mode" : "update",
         "token" : $token
-      }""" if isJsString(token) => error(NotImplemented, s"Not implemented yet $token", client)
+      }""" if isJsString(token) => error(NotImplemented, s"Not implemented yet $token", client)*/
 
         case _ =>
-          error(BadRequest, "bad json", client)
+          error(BadRequest, "bad json content", client)
         /*case registration(nickname, pwhash) => UsersDBRef ! UserDB.Register(nickname, pwhash)
       case authorisation(nickname, pwhash) => UsersDBRef ! UserDB.Authorise(nickname, pwhash, new InetSocketAddress("0.0.0.0", 5555)) // TODO - fix addr
       case logout(token) => UsersDBRef ! UserDB.Logout(UserDB.Token(token))
@@ -127,7 +129,7 @@ class ApiHandler() extends Actor with ActorLogging { // TODO - rename
       case _ => error("command syntax error", client)*/
       }
     } catch {
-      case e: JsonParseException => error(BadRequest, "bad json", client)
+      case e: JsonParseException => error(BadRequest, "bad json format", client)
     }
   }
 
