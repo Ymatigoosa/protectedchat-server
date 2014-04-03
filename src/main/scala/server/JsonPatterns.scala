@@ -2,60 +2,58 @@ package server
 
 import util._
 import util.JsonPattern._
-import play.api.libs.json._
-import play.api.libs.json.extensions._
-import play.api.libs.json.monad._
-import play.api.libs.json.monad.syntax._
+import spray.json._
+import DefaultJsonProtocol._ // !!! IMPORTANT, else `convertTo` and `toJson` won't work correctly
 
 /**
  * Created by 7 on 03.04.2014.
  */
 trait JsonPatterns {
-  val placeholder = "???"
+  val __ = JsString("???")
 
-  val registration = json"""{
-        "mode" : "registration",
-        "nickname" : "$placeholder",
-        "pw": "$placeholder"
-      }""".pattern(`placeholder`)
+  val registration = JsObject(
+    "mode" -> JsString("registration"),
+    "nickname" -> __,
+    "pw" -> __
+  ).pattern(__)
 
-  val authorization = json"""{
-        "mode" : "authorisation",
-        "nickname" : "$placeholder",
-        "pw": "$placeholder",
-        "p2pip": "$placeholder"
-      }""".pattern(placeholder)
+  val authorization = JsObject(
+    "mode" -> JsString("authorisation"),
+    "nickname" -> __,
+    "pw" -> __,
+    "p2pip" -> __
+  ).pattern(__)
 
-  val logout = json"""{
-        "mode" : "logout",
-        "token" : "$placeholder"
-      }""".pattern(placeholder)
+  val logout = JsObject(
+    "mode" -> JsString("logout"),
+    "token" -> __
+  ).pattern(__)
 
-  val getip = json"""{
-        "mode" : "getip",
-        "token" : "$placeholder",
-        "nickname" : "$placeholder"
-      }""".pattern(placeholder)
+  val getip = JsObject(
+    "mode" -> JsString("getip"),
+    "token" -> __,
+    "nickname" -> __
+  ).pattern(__)
 
-  val addfriend = json"""{
-        "mode" : "addfriend",
-        "token" : "$placeholder",
-        "nickname" : "$placeholder"
-      }""".pattern(placeholder)
+  val addfriend = JsObject(
+        "mode" -> JsString("addfriend"),
+        "token" -> __,
+        "nickname" -> __
+  ).pattern(__)
 
-  val removefriend = json"""{
-        "mode" : "removefriend",
-        "token" : "$placeholder",
-        "nickname" : "$placeholder"
-      }""".pattern(placeholder)
+  val removefriend = JsObject(
+    "mode" -> JsString("removefriend"),
+    "token" -> __,
+    "nickname" -> __
+  ).pattern(__)
 
-  val getfriends = json"""{
-        "mode" : "getfriends",
-        "token" : "$placeholder"
-      }""".pattern(placeholder)
+  val getfriends = JsObject(
+    "mode" -> JsString("getfriends"),
+    "token" -> __
+  ).pattern(__)
 
-  val update = json"""{
-        "mode" : "update",
-        "token" : "$placeholder"
-      }""".pattern(placeholder)
+  val update = JsObject(
+    "mode" -> JsString("update"),
+    "token" -> __
+  ).pattern(__)
 }

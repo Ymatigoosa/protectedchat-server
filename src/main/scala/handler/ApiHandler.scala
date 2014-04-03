@@ -17,13 +17,9 @@ import StatusCodes._
 import akka.io.IO
 import util._
 import util.JsonPattern._
-import scala.util.parsing.json.{JSONObject}
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
-import play.api.libs.json.extensions._
-import play.api.libs.json.monad._
-import play.api.libs.json.monad.syntax._
-import com.fasterxml.jackson.core.JsonParseException
+import spray.json._
+import DefaultJsonProtocol._ // !!! IMPORTANT, else `convertTo` and `toJson` won't work correctly
+import org.parboiled.errors.ParsingException
 import server.JsonPatterns
 
 class ApiHandler() extends Actor with ActorLogging with JsonPatterns { // TODO - rename
@@ -69,7 +65,7 @@ class ApiHandler() extends Actor with ActorLogging with JsonPatterns { // TODO -
 
   def processJson(data: String, client: ActorRef) {
     try {
-      Json.parse(data) match {
+      JsonParser(data) match {
 
         case registration(nickname: JsString, pw: JsString) =>
           error(NotImplemented, s"Not implemented yet $nickname $pw", client)
@@ -107,7 +103,7 @@ class ApiHandler() extends Actor with ActorLogging with JsonPatterns { // TODO -
       case _ => error("command syntax error", client)*/
       }
     } catch {
-      case e: JsonParseException => error(BadRequest, "bad json format", client)
+      case e: ParsingException => error(BadRequest, "bad json format", client)
     }
   }
 
@@ -116,14 +112,14 @@ class ApiHandler() extends Actor with ActorLogging with JsonPatterns { // TODO -
   def send(json: JsValue, client: ActorRef) {
     client ! HttpResponse(
       status = OK,
-      entity = HttpEntity(`application/json`, Json.stringify(json))
+      entity = HttpEntity(`application/json`, json.compactPrint)
     )
   }
 
   def error(code: StatusCode, msg: String, client: ActorRef) {
     client ! HttpResponse(
       status = code,
-      entity = HttpEntity(`application/json`, JSONObject(Map("error" -> msg)).toString())
+      entity = HttpEntity(`application/json`, JsObject("error" -> JsString(msg)).compactPrint)
     )
   }
 

@@ -1,7 +1,6 @@
 package util
-
-import play.api.libs.json._
-
+import spray.json._
+import DefaultJsonProtocol._ // !!! IMPORTANT, else `convertTo` and `toJson` won't work correctly
 /**
  * Created by 7 on 02.04.2014.
  *
@@ -10,17 +9,16 @@ import play.api.libs.json._
 package object JsonPattern {
 
   implicit class JsValueHelper(val jv: JsValue) {
-    def pattern(placeholder: String) = new JsonPattern(jv, placeholder)
-    def pattern: JsonPattern = pattern("???")
+    def pattern(placeholder: JsValue) = new JsonPattern(jv, placeholder)
   }
 
-  class JsonPattern(val pattern: JsValue, val placeholder: String) {
+  class JsonPattern(val pattern: JsValue, val placeholder: JsValue) {
     private def compareStep(ax: Option[Seq[JsValue]], pattern: JsValue, source: JsValue): Option[Seq[JsValue]] = {
       if (ax.nonEmpty) {
         (pattern, source) match {
-          case (JsString(`placeholder`), s) => Some(ax.get :+ s)
-          case (p: JsObject, s: JsObject) if p.fieldSet.size==s.fieldSet.size  =>
-            val zipped = p.fieldSet.zip(s.fieldSet)
+          case (`placeholder`, s) => Some(ax.get :+ s)
+          case (p: JsObject, s: JsObject) if p.fields.size==s.fields.size =>
+            val zipped = p.fields.toSeq.zip(s.fields.toSeq)
             zipped.foldLeft(ax) {
               case (acc, ((kp, vp), (ks, vs))) =>
                 if (kp == ks && acc.nonEmpty) {
@@ -29,8 +27,8 @@ package object JsonPattern {
                   None
                 }
             }
-          case (p: JsArray, s: JsArray) if p.value.size==s.value.size =>
-            val zipped = p.value.zip(s.value)
+          case (p: JsArray, s: JsArray) if p.elements.size==s.elements.size =>
+            val zipped = p.elements.zip(s.elements)
             zipped.foldLeft(ax) {
               case (acc, (vp, vs)) => compareStep(acc, vp, vs)
             }
