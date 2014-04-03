@@ -19,7 +19,7 @@ package object JsonPattern {
       if (ax.nonEmpty) {
         (pattern, source) match {
           case (JsString(`placeholder`), s) => Some(ax.get :+ s)
-          case (p: JsObject, s: JsObject) =>
+          case (p: JsObject, s: JsObject) if p.fieldSet.size==s.fieldSet.size  =>
             val zipped = p.fieldSet.zip(s.fieldSet)
             zipped.foldLeft(ax) {
               case (acc, ((kp, vp), (ks, vs))) =>
@@ -29,7 +29,7 @@ package object JsonPattern {
                   None
                 }
             }
-          case (p: JsArray, s: JsArray) =>
+          case (p: JsArray, s: JsArray) if p.value.size==s.value.size =>
             val zipped = p.value.zip(s.value)
             zipped.foldLeft(ax) {
               case (acc, (vp, vs)) => compareStep(acc, vp, vs)

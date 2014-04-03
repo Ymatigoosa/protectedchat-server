@@ -48,6 +48,18 @@ class JsonHelpersSpec extends FlatSpec {
         "nickname" : "a"
       }"""
 
+  val js4 = json"""{
+        "mode" : "registration",
+        "nickname" : "a",
+        "pw": "b",
+        "foo": "bar"
+      }"""
+
+  val js5 = json"""{
+        "mode" : "registration",
+        "nickname" : "a"
+      }"""
+
   "A JsonHelper" should "compare jsons" in {
     js1 match {
       case pattern1() => {}
@@ -92,6 +104,20 @@ class JsonHelpersSpec extends FlatSpec {
   it should "match keys" in {
     js2 match {
       case pattern6(n,s) =>
+        fail
+      case _ => {}
+    }
+  }
+
+  it should "work correctly on different keysets" in {
+    js4 match {
+      case pattern2(n,s) =>
+        fail
+      case _ => {}
+    }
+
+    js5 match {
+      case pattern2(n,s) =>
         fail
       case _ => {}
     }
