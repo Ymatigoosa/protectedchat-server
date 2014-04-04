@@ -5,7 +5,7 @@ import sbtassembly.Plugin._
 import AssemblyKeys._
 import com.typesafe.sbt.SbtStartScript
 
-name := """tcp-async"""
+name := """protectedchat-server"""
 
 version := "1.0"
 
