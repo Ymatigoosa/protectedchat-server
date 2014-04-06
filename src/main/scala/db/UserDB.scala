@@ -11,24 +11,12 @@ import util.UniqueIdGenerator
 import scala.concurrent.Future
 import scala.util.{Success, Failure}
 import java.util.UUID
+import scala.concurrent.duration._
+import scala.language.postfixOps
 
 /**
  * Created by Pahomov Dmitry <topt.iiiii@gmail.com> on 02.03.14.
  */
-
-trait UserQueries {
-  this: DB =>
-  object Query {
-    def addUser(nickname: String, pwhash: String) = execute("INSERT INTO users(nickname, pwhash, userinfo) VALUES (?, ?, ?)",nickname, pwhash, "")
-    def getUser(nickname: String, pwhash: String) = execute("SELECT id FROM users WHERE nickname=? AND pwhash=?", nickname, pwhash)
-    def makeFriends(owner: String, friend: String) = execute("INSERT INTO friends(owner, friend) SELECT u1.id, u2.id FROM users AS u1, users AS u2 WHERE u1.nickname=? AND u2.nickname=? AND NOT EXISTS (SELECT owner, friend FROM friends WHERE owner = u1.id AND friend=u2.id)", owner, friend)
-    def getFriendList(nickname: String) = fetch("SELECT u2.nickname FROM users AS u1, users AS u2, friends WHERE u1.nickname=? AND u1.id=friends.owner AND u2.id=friends.friend", nickname)
-  }
-}
-
-object UserDBProps {
-  def props() = Props(classOf[UserDB])
-}
 
 object UserDB {
   case class Token(val s: String) {
@@ -47,21 +35,26 @@ object UserDB {
 
   sealed abstract trait Message
   class TokenedMessage(val t: Token) extends Message
-  case class Register(nickname: String, pwhash: String) extends Message
-  case class Authorise(nickname: String, pwhash: String, ip: InetSocketAddress) extends Message
+  case class Register(nickname: String, pw: String) extends Message
+  case class Authorise(nickname: String, pw: String, ip: String) extends Message
   case class Logout(token: Token) extends TokenedMessage(token)
   case class Getip(token: Token, nickname: String) extends TokenedMessage(token)
   case class AddFriend(owner: Token, friend: String) extends TokenedMessage(owner)
+  case class RemoveFriend(owner: Token, friend: String) extends TokenedMessage(owner)
   case class GetFriends(token: Token) extends TokenedMessage(token)
+  case class Update(token: Token) extends TokenedMessage(token)
   case class ConnectionClosed() extends Message
+  case class OfflineInactive() extends Message
 
   sealed abstract trait Reply
   case class Registered(nickname: String) extends Reply
   case class Authorised(nickname: String, sesid: Token) extends Reply
   case class Logouted(nickname: String) extends Reply
-  case class Userip(nickname: String, ip: InetSocketAddress) extends Message
+  case class Userip(nickname: String, ip: String) extends Message
   case class FriendAdded(owner: String, friend: String) extends Reply
   case class FriendList(nickname: String, list: Seq[(String, Boolean)]) extends Reply
+  case class FriendDeleted(owner: String, friend: String) extends Reply
+  case class Updated(msg: String) extends Reply
   case class Error(msg: String) extends Reply
 }
 
@@ -72,48 +65,62 @@ class UserDB extends Actor with ActorLogging with DB with UserQueries {
 
   override implicit def dispatcher = context.dispatcher
 
-  val offline = 0
+  val SALT = "bachelorpower"
   val online = 1
+  val MAXIDLE: Long = 60000
 
-  case class UserSession(socketactor: ActorRef,
+  context.system.scheduler.schedule(MAXIDLE milliseconds,MAXIDLE milliseconds, self, OfflineInactive())
+
+  case class UserSession(lastActivity: Long,
                          nickname: String,
-                         userip: InetSocketAddress,
+                         userip: String,
                          status: Int)
+
   private val _sessions = HashMap[Token, UserSession]()
 
   def receive: Receive = {
-    case Register(nickname, pwhash) => newUser(nickname, pwhash)
-    case Authorise(nickname, pwhash, ip) => authoriseUser(nickname, pwhash, ip)
-    case Logout(token) if checkToken(token) => logoutUser(token)
-    case Getip(token, nickname) if checkToken(token) => getUserIp(token, nickname)
-    case AddFriend(token, friend) if checkToken(token) => addFriendToUser(token, friend)
-    case GetFriends(token) if checkToken(token) => getUserFriends(token)
-    case ConnectionClosed() => makeOffline(sender)
-    case TokenedMessage(token) => sender ! Error("bad token "+token) // TODO - remove token check from functions
+    case Register(nickname, pw) =>
+      newUser(nickname, pw)
+
+    case Authorise(nickname, pw, ip) =>
+      authoriseUser(nickname, pw, ip)
+
+    case Logout(token) if checkToken(token) =>
+      logoutUser(token)
+
+    case Getip(token, nickname) if checkToken(token) =>
+      updateLastActivity(token)
+      getUserIp(token, nickname)
+
+    case AddFriend(token, friend) if checkToken(token) =>
+      updateLastActivity(token)
+      addFriendToUser(token, friend)
+
+    case RemoveFriend(token, friend) if checkToken(token) =>
+      updateLastActivity(token)
+      removeFriendToUser(token, friend)
+
+    case GetFriends(token) if checkToken(token) =>
+      updateLastActivity(token)
+      getUserFriends(token)
+
+    case Update(token) if checkToken(token) =>
+      updateLastActivity(token)
+      sender ! Updated(nickname(token).get)
+
+    case OfflineInactive() =>
+      offlineInactive()
+
+    case TokenedMessage(token) =>
+      sender ! Error("bad token "+token) // TODO - remove token check from functions
   }
 
-  def checkToken(t: Token) = {
-    session(t) match {
-      case Some((_, UserSession(ar, _, _, _) )) => ar.equals(sender)
-      case None => false
-    }
+  def checkToken(t: Token) = _sessions contains t
+
+  def makeSecureRandomString(us: UserSession) = us match {
+    case UserSession(time, nickname, ip, _) => md5(nickname + time.toString + ip)
   }
 
-  def printAll() {
-    log.debug("values in db are:")
-    for {
-      queryResult <- fetch("SELECT * FROM pro")
-      resultSet <- queryResult
-      rowData <- resultSet
-      result = getData(rowData)
-    } log.debug(result)
-  }
-
-  def getData(rowData: RowData) = {
-    rowData("data").asInstanceOf[String]
-  }
-
-  def makeSecureRandomString() = UniqueIdGenerator()
 
   def session(token: Token) = _sessions.par.get(token) match {
     case Some(u: UserSession) => Some( (token,u) )
@@ -131,8 +138,16 @@ class UserDB extends Actor with ActorLogging with DB with UserQueries {
   def isOnline(nick: String) = session(nick).nonEmpty
   def isOnline(token: Token) = _sessions.par.contains(token)
 
-  def newUser(nickname: String, pwhash: String) {
+  def updateLastActivity(t: Token) {
+    _sessions.par.get(t) match {
+      case Some(UserSession(_, nickname, userip , status)) => _sessions.update(t, UserSession(System.currentTimeMillis, nickname, userip , status))
+      case _ => log.error("there is no user to update last activity")
+    }
+  }
+
+  def newUser(nickname: String, pw: String) {
     val connection = sender
+    val pwhash = md5(nickname+pw+SALT)
     if (!"\\A\\w+\\z".r.pattern.matcher(nickname).matches) {
       connection ! Error("bad nickname")
       return
@@ -148,16 +163,18 @@ class UserDB extends Actor with ActorLogging with DB with UserQueries {
     }
   }
 
-  def authoriseUser(nickname: String, pwhash: String, ip: InetSocketAddress) {
+  def authoriseUser(nickname: String, pw: String, ip: String) {
     val connection = sender
+    val pwhash = md5(nickname+pw+SALT)
     Query.getUser(nickname, pwhash).map {
       queryResult =>
         queryResult.rows match {
           case Some(rows) =>
             if (rows.nonEmpty) {
-              val token = Token(makeSecureRandomString())
+              val us = UserSession(System.currentTimeMillis, nickname, ip, online)
+              val token = Token(makeSecureRandomString(us))
               //val userid = rows(0)("id").asInstanceOf[Int]
-              _sessions.put(token, UserSession(connection, nickname, ip, online))
+              _sessions.put(token, us)
               connection ! Authorised(nickname, token)
             } else {
               connection ! Error("bad nickname or password")
@@ -169,7 +186,7 @@ class UserDB extends Actor with ActorLogging with DB with UserQueries {
 
   def logoutUser(token: Token) {
     _sessions.par.remove(token) match {
-      case Some( UserSession(socketactor, nickname, _,_)) => socketactor ! Logouted(nickname)
+      case Some( UserSession(_, nickname, _,_)) => sender ! Logouted(nickname)
       case None => sender ! Error("nothing to logout for "+token)
     }
   }
@@ -181,8 +198,6 @@ class UserDB extends Actor with ActorLogging with DB with UserQueries {
     }
   }
 
-
-
   def addFriendToUser(token: Token, friend: String) {
     val connection = sender
     val owner = nickname(token).getOrElse("")
@@ -192,6 +207,15 @@ class UserDB extends Actor with ActorLogging with DB with UserQueries {
       case e  =>
         log.debug("AddFriendToUser error: " + e)
         connection ! Error("cannot add friend")
+    }
+  }
+
+  def removeFriendToUser(token: Token, friend: String) {
+    val connection = sender
+    val owner = nickname(token).getOrElse("")
+    Query.unfriend(owner, friend) onComplete{
+      case Success(s) => connection ! FriendDeleted(owner, friend)
+      case Failure(t) => connection ! Error("cannot detele friend"+t.getMessage)
     }
   }
 
@@ -214,11 +238,19 @@ class UserDB extends Actor with ActorLogging with DB with UserQueries {
     }
   }
 
-  def makeOffline(sender: ActorRef) {
-    for {
-      (token, _) <- _sessions.par.find{ case (_, UserSession(a, _, _, _)) => a.equals(sender) }
-    } _sessions -= token
+  def offlineInactive() {
+    val currenttime = System.currentTimeMillis
+    log.debug("making offline idling users")
+    _sessions.retain{
+      case (_, UserSession(time, _, _, _)) => time+MAXIDLE > currenttime
+    }
+    lazy val d = _sessions map {case (t, UserSession(_, n, _, _)) => s"$t => $n"} mkString("\n")
+    log.debug(d)
+  }
+
+  def md5( s:String ) : String = {
+    // Besides "MD5", "SHA-256", and other hashes are available
+    val m = java.security.MessageDigest.getInstance("MD5").digest(s.getBytes("UTF-8"));
+    m map {c => (c & 0xff) toHexString} mkString
   }
 }
-
-//SELECT users.nickname FROM friends,users WHERE users.id=friends.friend AND friends.owner=1

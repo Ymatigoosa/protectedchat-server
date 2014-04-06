@@ -11,6 +11,8 @@ version := "1.0"
 
 scalaVersion := "2.10.4"
 
+scalacOptions ++= Seq("-unchecked", "-deprecation","-feature")
+
 resolvers ++= Seq(
   "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
   "mandubian maven bintray" at "http://dl.bintray.com/mandubian/maven",

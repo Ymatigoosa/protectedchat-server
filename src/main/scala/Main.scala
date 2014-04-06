@@ -1,11 +1,11 @@
 import akka.actor.{ Props, ActorSystem }
-import db.UserDBProps
+import db.UserDB
 import handler._
 
 object Main extends App {
   val system = ActorSystem("server")
 
-  //val UserDB = system.actorOf(UserDBProps.props(), "UserDBActor")
+  val UserDB = system.actorOf(Props(classOf[UserDB]), "UserDBActor")
   val service = system.actorOf(Props(classOf[ApiHandler]), "ApiHandler")
 }
 

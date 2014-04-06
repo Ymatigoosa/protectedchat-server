@@ -9,7 +9,7 @@ import DefaultJsonProtocol._ // !!! IMPORTANT, else `convertTo` and `toJson` won
  * Created by 7 on 03.04.2014.
  */
 trait JsonPatterns {
-  val __ = JsString("???")
+  val __ = JsString("_?_")
 
   val registration = JsObject(
     "mode" -> JsString("registration"),
