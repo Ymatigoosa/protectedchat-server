@@ -13,7 +13,8 @@ Server API
 
 Requests
 --------------------
-`{
+```
+{
   "mode": "registration",
   "nickname": "?",
   "pw": "?"
@@ -57,12 +58,14 @@ Requests
 {
   "mode": "update",
   "token": "?"
-}`
+}
+```
 
 Replies
 --------------------
 
-`{
+```
+{
   "status": "registered",
   "nickname": "?"
 }
@@ -104,4 +107,5 @@ Replies
 {
   "status": "error", // You can check http response code when error for additional info
   "errormsg": "?"    // for example code 400 - Bad request
-}`
+}
+```
