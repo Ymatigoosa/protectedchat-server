@@ -158,7 +158,7 @@ class UserDB extends Actor with ActorLogging with DB with UserQueries {
         connection ! Registered(nickname)
     } onFailure  {
       case e  =>
-        log.debug("newUser insertions error: " + e)
+        log.debug("newUser insertions error: " + e + e.getMessage)
         connection ! Error("nickname already exists")
     }
   }
