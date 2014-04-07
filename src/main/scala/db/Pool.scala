@@ -1,7 +1,7 @@
 package db
 
 import com.github.mauricio.async.db.Configuration
-import com.github.mauricio.async.db.postgresql.pool.PostgreSQLConnectionFactory
+import com.github.mauricio.async.db.mysql.pool.MySQLConnectionFactory
 import com.github.mauricio.async.db.pool.ConnectionPool
 import com.github.mauricio.async.db.pool.PoolConfiguration
 import util.ConfExtension
@@ -16,6 +16,6 @@ class Pool(system: ActorSystem) {
     password = Some(conf.dbPassword),
     database = Some(conf.dbName))
 
-  val factory = new PostgreSQLConnectionFactory(configuration)
+  val factory = new MySQLConnectionFactory(configuration)
   val pool = new ConnectionPool(factory, new PoolConfiguration(conf.dbPoolMaxObjects, conf.dbPoolMaxIdle, conf.dbPoolMaxQueueSize))
 }
