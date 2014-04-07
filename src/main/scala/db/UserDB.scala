@@ -66,6 +66,7 @@ class UserDB extends Actor with ActorLogging with DB with UserQueries {
   override implicit def dispatcher = context.dispatcher
 
   val SALT = "bachelorpower"
+  val TOKENSALT = "motog"
   val online = 1
   val MAXIDLE: Long = 60000
 
@@ -118,7 +119,7 @@ class UserDB extends Actor with ActorLogging with DB with UserQueries {
   def checkToken(t: Token) = _sessions contains t
 
   def makeSecureRandomString(us: UserSession) = us match {
-    case UserSession(time, nickname, ip, _) => md5(nickname + time.toString + ip)
+    case UserSession(time, nickname, ip, _) => md5(nickname + time.toString + TOKENSALT + ip)
   }
 
 

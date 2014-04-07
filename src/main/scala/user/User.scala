@@ -1,7 +1,7 @@
 package user
 
 /**
- * Created by 7 on 03.03.14.
+ * Created by Pahomov Dmitry on 03.03.14.
  */
 
 object User {

@@ -6,7 +6,7 @@ import spray.json._
 import DefaultJsonProtocol._ // !!! IMPORTANT, else `convertTo` and `toJson` won't work correctly
 
 /**
- * Created by 7 on 03.04.2014.
+ * Created by Pahomov Dmitry on 03.04.2014.
  */
 trait JsonPatterns {
   val __ = JsString("_?_")

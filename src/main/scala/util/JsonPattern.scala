@@ -2,9 +2,7 @@ package util
 import spray.json._
 import DefaultJsonProtocol._ // !!! IMPORTANT, else `convertTo` and `toJson` won't work correctly
 /**
- * Created by 7 on 02.04.2014.
- *
- * unapply stolen from https://github.com/mandubian/play-json-zipper
+ * Created by Pahomov Dmitry on 02.04.2014.
  */
 package object JsonPattern {
 
