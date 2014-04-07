@@ -37,6 +37,9 @@ class ApiHandler() extends Actor with ActorLogging with JsonPatterns { // TODO -
     case Http.Connected(remote, local) =>
       sender ! Http.Register(self)
 
+    case HttpRequest(GET, Uri.Path("/"), _, _, _) =>
+      sender ! HttpResponse(status = OK,entity = "This is json api server. You can see full information at https://github.com/pahomovda/protectedchat-server")
+
     case HttpRequest(POST, Uri.Path("/api/json/"), _, entity: HttpEntity.NonEmpty, _) =>
       processJson(entity.asString, sender)
 
