@@ -1,7 +1,7 @@
 package db
 
-import scala.concurrent.{ExecutionContext, Future}
 import com.github.mauricio.async.db.{ RowData, QueryResult }
+import scala.concurrent.{ExecutionContext, Future}
 import akka.actor.ActorSystem
 
 trait DB {

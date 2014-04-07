@@ -3,7 +3,6 @@ import org.scalatest.{ BeforeAndAfterAll, WordSpec }
 import akka.actor.ActorSystem
 import akka.testkit.{ ImplicitSender, TestKit }
 import akka.util.ByteString
-import db.UserDBProps
 import java.net.{InetAddress, Socket}
 import scala.io.BufferedSource
 import java.io.PrintStream
