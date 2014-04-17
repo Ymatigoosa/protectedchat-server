@@ -132,7 +132,7 @@ class ApiHandler() extends Actor with ActorLogging with JsonPatterns { // TODO -
 
       case UserDB.FriendList(nickname, seq) =>
         send(JsObject(
-          "status" -> JsString("friendadded"),
+          "status" -> JsString("friendlist"),
           "nickname" -> JsString(nickname),
           "list" -> JsString(seq.mkString(","))
         ), client)

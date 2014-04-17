@@ -94,7 +94,7 @@ Replies
 }
 
 {
-  "status": "friendadded",
+  "status": "friendlist",
   "nickname": "?",
   "list": "?"
 }
