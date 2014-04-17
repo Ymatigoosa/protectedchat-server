@@ -43,6 +43,9 @@ class ApiHandler() extends Actor with ActorLogging with JsonPatterns { // TODO -
     case HttpRequest(POST, Uri.Path("/api/json/"), _, entity: HttpEntity.NonEmpty, _) =>
       processJson(entity.asString, sender)
 
+    case HttpRequest(POST, Uri.Path("/api/json"), _, entity: HttpEntity.NonEmpty, _) =>
+      processJson(entity.asString, sender)
+
     case HttpRequest(_, _, _, _, _) =>
       error(BadRequest, "Bad request", sender)
 
