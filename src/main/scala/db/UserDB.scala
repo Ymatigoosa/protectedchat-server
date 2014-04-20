@@ -205,7 +205,7 @@ class UserDB extends Actor with ActorLogging with DB with UserQueries {
     Query.makeFriends(owner, friend) onComplete {
       case Success(s) => connection ! FriendAdded(owner, friend)
       case Failure(t)  =>
-        log.debug("AddFriendToUser error: " + e)
+        log.debug("AddFriendToUser error: " + t)
         connection ! Error("cannot add friend")
     }
   }
