@@ -202,10 +202,9 @@ class UserDB extends Actor with ActorLogging with DB with UserQueries {
   def addFriendToUser(token: Token, friend: String) {
     val connection = sender
     val owner = nickname(token).getOrElse("")
-    Query.makeFriends(owner, friend).map {
-      _ => connection ! FriendAdded(owner, friend)
-    } onFailure  {
-      case e  =>
+    Query.makeFriends(owner, friend) onComplete {
+      case Success(s) => connection ! FriendAdded(owner, friend)
+      case Failure(t)  =>
         log.debug("AddFriendToUser error: " + e)
         connection ! Error("cannot add friend")
     }
