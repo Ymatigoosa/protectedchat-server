@@ -94,6 +94,12 @@ Replies
 }
 
 {
+  "status": "friendremoved",
+  "owner": "?",
+  "friend": "?"
+}
+
+{
   "status": "friendlist",
   "nickname": "?",
   "list": "?"
